@@ -165,7 +165,7 @@
         let currentQuestionText = "";
         let isProcessing = false; 
 
-        function speakText(text, speechRate = 0.75) {
+        function speakText(text, speechRate = 0.9) {
             window.speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'en-US';
@@ -365,4 +365,5 @@
     </script>
 </body>
 </html>
+
 
