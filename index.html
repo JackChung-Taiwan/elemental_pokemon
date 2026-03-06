@@ -12,17 +12,21 @@
         .poke-card:hover { transform: scale(1.05); border-color: #3b82f6; box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.3); }
         .correct-card {
             border-color: #22c55e !important; background-color: #f0fdf4 !important;
-            transform: scale(1.05); pointer-events: none; box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
+            transform: scale(1.05); box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
         }
+        .correct-card-clickable { cursor: pointer !important; pointer-events: auto !important; }
         .wrong-card { border-color: #ef4444 !important; background-color: #fef2f2 !important; opacity: 0.5; pointer-events: none; }
         .clickable-audio:hover { filter: brightness(1.1); transform: scale(1.05); transition: all 0.2s; }
+
         @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 50% { transform: translateX(10px); } 75% { transform: translateX(-10px); } }
         .shake { animation: shake 0.4s ease-in-out; }
+
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
         .fade-in-up { animation: fadeInUp 0.4s ease-out forwards; }
+
         .img-shrink { height: 6rem !important; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
 
-        /* 新增：彈出浮動動畫 CSS */
+        /* 彈出浮動動畫 */
         .floating-anim {
             position: fixed;
             pointer-events: none;
@@ -36,6 +40,21 @@
             40% { transform: translate(-50%, -100%) scale(1.2); }
             100% { opacity: 0; transform: translate(-50%, -150%) scale(1); }
         }
+
+        /* 脈衝光暈：答對卡片提示可點擊 */
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.4); }
+            50% { box-shadow: 0 0 35px rgba(34, 197, 94, 0.85); }
+        }
+        .pulse-glow { animation: pulseGlow 1.2s ease-in-out infinite; }
+
+        /* 卡片被點擊唸名字時的彈跳 */
+        @keyframes cardBounce {
+            0%, 100% { transform: scale(1.05); }
+            40% { transform: scale(1.12); }
+            70% { transform: scale(1.03); }
+        }
+        .card-bounce { animation: cardBounce 0.4s ease-out; }
     </style>
 </head>
 <body class="bg-blue-50 min-h-screen font-sans flex flex-col items-center py-6 md:py-8 overflow-x-hidden">
@@ -77,123 +96,145 @@
 
     <script>
         const pokeDB = [
-            { i: 1, t: 'grass', e: 'Bulbasaur', z: '妙蛙種子', eg: 'Seed Pokémon', zg: '種子寶可夢', s: 1 },
-            { i: 4, t: 'fire', e: 'Charmander', z: '小火龍', eg: 'Lizard Pokémon', zg: '蜥蜴寶可夢', s: 1 },
-            { i: 7, t: 'water', e: 'Squirtle', z: '傑尼龜', eg: 'Tiny Turtle Pokémon', zg: '小龜寶可夢', s: 1 },
-            { i: 10, t: 'bug', e: 'Caterpie', z: '綠毛蟲', eg: 'Worm Pokémon', zg: '蟲寶寶寶可夢', s: 1 },
-            { i: 16, t: 'normal', e: 'Pidgey', z: '波波', eg: 'Tiny Bird Pokémon', zg: '小鳥寶可夢', s: 1 },
-            { i: 25, t: 'electric', e: 'Pikachu', z: '皮卡丘', eg: 'Mouse Pokémon', zg: '鼠寶可夢', s: 1 },
-            { i: 27, t: 'ground', e: 'Sandshrew', z: '穿山鼠', eg: 'Mouse Pokémon', zg: '鼠寶可夢', s: 1 },
-            { i: 35, t: 'fairy', e: 'Clefairy', z: '皮皮', eg: 'Fairy Pokémon', zg: '妖精寶可夢', s: 1 },
-            { i: 37, t: 'fire', e: 'Vulpix', z: '六尾', eg: 'Fox Pokémon', zg: '狐狸寶可夢', s: 1 },
-            { i: 39, t: 'normal', e: 'Jigglypuff', z: '胖丁', eg: 'Balloon Pokémon', zg: '氣球寶可夢', s: 1 },
-            { i: 41, t: 'poison', e: 'Zubat', z: '超音蝠', eg: 'Bat Pokémon', zg: '蝙蝠寶可夢', s: 1 },
-            { i: 43, t: 'grass', e: 'Oddish', z: '走路草', eg: 'Weed Pokémon', zg: '雜草寶可夢', s: 1 },
-            { i: 50, t: 'ground', e: 'Diglett', z: '地鼠', eg: 'Mole Pokémon', zg: '鼴鼠寶可夢', s: 1 },
-            { i: 52, t: 'normal', e: 'Meowth', z: '喵喵', eg: 'Scratch Cat Pokémon', zg: '妖怪貓寶可夢', s: 1 },
-            { i: 54, t: 'water', e: 'Psyduck', z: '可達鴨', eg: 'Duck Pokémon', zg: '鴨寶可夢', s: 1 },
-            { i: 58, t: 'fire', e: 'Growlithe', z: '卡蒂狗', eg: 'Puppy Pokémon', zg: '小狗寶可夢', s: 1 },
-            { i: 60, t: 'water', e: 'Poliwag', z: '蚊香蝌蚪', eg: 'Tadpole Pokémon', zg: '蝌蚪寶可夢', s: 1 },
-            { i: 66, t: 'fighting', e: 'Machop', z: '腕力', eg: 'Superpower Pokémon', zg: '怪力寶可夢', s: 1 },
-            { i: 69, t: 'grass', e: 'Bellsprout', z: '喇叭芽', eg: 'Flower Pokémon', zg: '花寶可夢', s: 1 },
-            { i: 74, t: 'rock', e: 'Geodude', z: '小拳石', eg: 'Rock Pokémon', zg: '岩石寶可夢', s: 1 },
-            { i: 79, t: 'water', e: 'Slowpoke', z: '呆呆獸', eg: 'Dopey Pokémon', zg: '憨憨寶可夢', s: 1 },
-            { i: 92, t: 'ghost', e: 'Gastly', z: '鬼斯', eg: 'Gas Pokémon', zg: '氣體寶可夢', s: 1 },
-            { i: 95, t: 'rock', e: 'Onix', z: '大岩蛇', eg: 'Rock Snake Pokémon', zg: '岩石蛇寶可夢', s: 1 },
-            { i: 133, t: 'normal', e: 'Eevee', z: '伊布', eg: 'Evolution Pokémon', zg: '進化寶可夢', s: 1 },
-            { i: 143, t: 'normal', e: 'Snorlax', z: '卡比獸', eg: 'Sleeping Pokémon', zg: '瞌睡寶可夢', s: 1 },
-            { i: 2, t: 'grass', e: 'Ivysaur', z: '妙蛙草', eg: 'Seed Pokémon', zg: '種子寶可夢' },
-            { i: 5, t: 'fire', e: 'Charmeleon', z: '火恐龍', eg: 'Flame Pokémon', zg: '火焰寶可夢' },
-            { i: 8, t: 'water', e: 'Wartortle', z: '卡咪龜', eg: 'Turtle Pokémon', zg: '龜寶可夢' },
-            { i: 11, t: 'bug', e: 'Metapod', z: '鐵甲蛹', eg: 'Cocoon Pokémon', zg: '蛹寶可夢' },
-            { i: 12, t: 'bug', e: 'Butterfree', z: '巴大蝶', eg: 'Butterfly Pokémon', zg: '蝴蝶寶可夢' },
-            { i: 17, t: 'normal', e: 'Pidgeotto', z: '比比鳥', eg: 'Bird Pokémon', zg: '鳥寶可夢' },
-            { i: 19, t: 'normal', e: 'Rattata', z: '小拉達', eg: 'Mouse Pokémon', zg: '鼠寶可夢' },
-            { i: 23, t: 'poison', e: 'Ekans', z: '阿柏蛇', eg: 'Snake Pokémon', zg: '蛇寶可夢' },
-            { i: 31, t: 'poison', e: 'Nidoqueen', z: '尼多后', eg: 'Drill Pokémon', zg: '鑽錐寶可夢' },
-            { i: 45, t: 'grass', e: 'Vileplume', z: '霸王花', eg: 'Flower Pokémon', zg: '花寶可夢' },
-            { i: 63, t: 'psychic', e: 'Abra', z: '凱西', eg: 'Psi Pokémon', zg: '念力寶可夢' },
-            { i: 64, t: 'psychic', e: 'Kadabra', z: '勇基拉', eg: 'Psi Pokémon', zg: '念力寶可夢' },
-            { i: 65, t: 'psychic', e: 'Alakazam', z: '胡地', eg: 'Psi Pokémon', zg: '念力寶可夢' },
-            { i: 77, t: 'fire', e: 'Ponyta', z: '小火馬', eg: 'Fire Horse Pokémon', zg: '火馬寶可夢' },
-            { i: 81, t: 'electric', e: 'Magnemite', z: '小磁怪', eg: 'Magnet Pokémon', zg: '磁鐵寶可夢' },
-            { i: 82, t: 'electric', e: 'Magneton', z: '三合一磁怪', eg: 'Magnet Pokémon', zg: '磁鐵寶可夢' },
-            { i: 86, t: 'water', e: 'Seel', z: '小海獅', eg: 'Sea Lion Pokémon', zg: '海獅寶可夢' },
-            { i: 94, t: 'ghost', e: 'Gengar', z: '耿鬼', eg: 'Shadow Pokémon', zg: '影子寶可夢' },
-            { i: 104, t: 'ground', e: 'Cubone', z: '卡拉卡拉', eg: 'Lonely Pokémon', zg: '孤獨寶可夢' },
-            { i: 109, t: 'poison', e: 'Koffing', z: '瓦斯彈', eg: 'Poison Gas Pokémon', zg: '毒氣寶可夢' },
-            { i: 110, t: 'poison', e: 'Weezing', z: '雙彈瓦斯', eg: 'Poison Gas Pokémon', zg: '毒氣寶可夢' },
-            { i: 114, t: 'grass', e: 'Tangela', z: '蔓藤怪', eg: 'Vine Pokémon', zg: '藤蔓寶可夢' },
-            { i: 116, t: 'water', e: 'Horsea', z: '墨海馬', eg: 'Dragon Pokémon', zg: '龍寶可夢' },
-            { i: 118, t: 'water', e: 'Goldeen', z: '角金魚', eg: 'Goldfish Pokémon', zg: '金魚寶可夢' },
-            { i: 120, t: 'water', e: 'Staryu', z: '海星星', eg: 'Star Shape Pokémon', zg: '星型寶可夢' },
-            { i: 121, t: 'water', e: 'Starmie', z: '寶石海星', eg: 'Mysterious Pokémon', zg: '謎寶可夢' },
-            { i: 123, t: 'bug', e: 'Scyther', z: '飛天螳螂', eg: 'Mantis Pokémon', zg: '螳螂寶可夢' },
-            { i: 124, t: 'ice', e: 'Jynx', z: '迷唇姐', eg: 'Human Shape Pokémon', zg: '人形寶可夢' },
-            { i: 125, t: 'electric', e: 'Electabuzz', z: '電擊獸', eg: 'Electric Pokémon', zg: '電擊寶可夢' },
-            { i: 126, t: 'fire', e: 'Magmar', z: '鴨嘴火獸', eg: 'Spitfire Pokémon', zg: '吐火寶可夢' },
-            { i: 129, t: 'water', e: 'Magikarp', z: '鯉魚王', eg: 'Fish Pokémon', zg: '魚寶可夢' },
-            { i: 130, t: 'water', e: 'Gyarados', z: '暴鯉龍', eg: 'Atrocious Pokémon', zg: '凶惡寶可夢' },
-            { i: 131, t: 'water', e: 'Lapras', z: '拉普拉斯', eg: 'Transport Pokémon', zg: '乘載寶可夢' },
-            { i: 134, t: 'water', e: 'Vaporeon', z: '水伊布', eg: 'Bubble Jet Pokémon', zg: '吐泡寶可夢' },
-            { i: 149, t: 'dragon', e: 'Dragonite', z: '快龍', eg: 'Dragon Pokémon', zg: '龍寶可夢' }
+            { i: 1,   t: 'grass',    e: 'Bulbasaur',   z: '妙蛙種子', eg: 'Seed Pokémon',          zg: '種子寶可夢',     s: 1 },
+            { i: 4,   t: 'fire',     e: 'Charmander',  z: '小火龍',   eg: 'Lizard Pokémon',         zg: '蜥蜴寶可夢',     s: 1 },
+            { i: 7,   t: 'water',    e: 'Squirtle',    z: '傑尼龜',   eg: 'Tiny Turtle Pokémon',    zg: '小龜寶可夢',     s: 1 },
+            { i: 10,  t: 'bug',      e: 'Caterpie',    z: '綠毛蟲',   eg: 'Worm Pokémon',           zg: '蟲寶寶寶可夢',   s: 1 },
+            { i: 16,  t: 'normal',   e: 'Pidgey',      z: '波波',     eg: 'Tiny Bird Pokémon',      zg: '小鳥寶可夢',     s: 1 },
+            { i: 25,  t: 'electric', e: 'Pikachu',     z: '皮卡丘',   eg: 'Mouse Pokémon',          zg: '鼠寶可夢',       s: 1 },
+            { i: 27,  t: 'ground',   e: 'Sandshrew',   z: '穿山鼠',   eg: 'Mouse Pokémon',          zg: '鼠寶可夢',       s: 1 },
+            { i: 35,  t: 'fairy',    e: 'Clefairy',    z: '皮皮',     eg: 'Fairy Pokémon',          zg: '妖精寶可夢',     s: 1 },
+            { i: 37,  t: 'fire',     e: 'Vulpix',      z: '六尾',     eg: 'Fox Pokémon',            zg: '狐狸寶可夢',     s: 1 },
+            { i: 39,  t: 'normal',   e: 'Jigglypuff',  z: '胖丁',     eg: 'Balloon Pokémon',        zg: '氣球寶可夢',     s: 1 },
+            { i: 41,  t: 'poison',   e: 'Zubat',       z: '超音蝠',   eg: 'Bat Pokémon',            zg: '蝙蝠寶可夢',     s: 1 },
+            { i: 43,  t: 'grass',    e: 'Oddish',      z: '走路草',   eg: 'Weed Pokémon',           zg: '雜草寶可夢',     s: 1 },
+            { i: 50,  t: 'ground',   e: 'Diglett',     z: '地鼠',     eg: 'Mole Pokémon',           zg: '鼴鼠寶可夢',     s: 1 },
+            { i: 52,  t: 'normal',   e: 'Meowth',      z: '喵喵',     eg: 'Scratch Cat Pokémon',    zg: '妖怪貓寶可夢',   s: 1 },
+            { i: 54,  t: 'water',    e: 'Psyduck',     z: '可達鴨',   eg: 'Duck Pokémon',           zg: '鴨寶可夢',       s: 1 },
+            { i: 58,  t: 'fire',     e: 'Growlithe',   z: '卡蒂狗',   eg: 'Puppy Pokémon',          zg: '小狗寶可夢',     s: 1 },
+            { i: 60,  t: 'water',    e: 'Poliwag',     z: '蚊香蝌蚪', eg: 'Tadpole Pokémon',        zg: '蝌蚪寶可夢',     s: 1 },
+            { i: 66,  t: 'fighting', e: 'Machop',      z: '腕力',     eg: 'Superpower Pokémon',     zg: '怪力寶可夢',     s: 1 },
+            { i: 69,  t: 'grass',    e: 'Bellsprout',  z: '喇叭芽',   eg: 'Flower Pokémon',         zg: '花寶可夢',       s: 1 },
+            { i: 74,  t: 'rock',     e: 'Geodude',     z: '小拳石',   eg: 'Rock Pokémon',           zg: '岩石寶可夢',     s: 1 },
+            { i: 79,  t: 'water',    e: 'Slowpoke',    z: '呆呆獸',   eg: 'Dopey Pokémon',          zg: '憨憨寶可夢',     s: 1 },
+            { i: 92,  t: 'ghost',    e: 'Gastly',      z: '鬼斯',     eg: 'Gas Pokémon',            zg: '氣體寶可夢',     s: 1 },
+            { i: 95,  t: 'rock',     e: 'Onix',        z: '大岩蛇',   eg: 'Rock Snake Pokémon',     zg: '岩石蛇寶可夢',   s: 1 },
+            { i: 133, t: 'normal',   e: 'Eevee',       z: '伊布',     eg: 'Evolution Pokémon',      zg: '進化寶可夢',     s: 1 },
+            { i: 143, t: 'normal',   e: 'Snorlax',     z: '卡比獸',   eg: 'Sleeping Pokémon',       zg: '瞌睡寶可夢',     s: 1 },
+            { i: 2,   t: 'grass',    e: 'Ivysaur',     z: '妙蛙草',   eg: 'Seed Pokémon',           zg: '種子寶可夢' },
+            { i: 5,   t: 'fire',     e: 'Charmeleon',  z: '火恐龍',   eg: 'Flame Pokémon',          zg: '火焰寶可夢' },
+            { i: 8,   t: 'water',    e: 'Wartortle',   z: '卡咪龜',   eg: 'Turtle Pokémon',         zg: '龜寶可夢' },
+            { i: 11,  t: 'bug',      e: 'Metapod',     z: '鐵甲蛹',   eg: 'Cocoon Pokémon',         zg: '蛹寶可夢' },
+            { i: 12,  t: 'bug',      e: 'Butterfree',  z: '巴大蝶',   eg: 'Butterfly Pokémon',      zg: '蝴蝶寶可夢' },
+            { i: 17,  t: 'normal',   e: 'Pidgeotto',   z: '比比鳥',   eg: 'Bird Pokémon',           zg: '鳥寶可夢' },
+            { i: 19,  t: 'normal',   e: 'Rattata',     z: '小拉達',   eg: 'Mouse Pokémon',          zg: '鼠寶可夢' },
+            { i: 23,  t: 'poison',   e: 'Ekans',       z: '阿柏蛇',   eg: 'Snake Pokémon',          zg: '蛇寶可夢' },
+            { i: 31,  t: 'poison',   e: 'Nidoqueen',   z: '尼多后',   eg: 'Drill Pokémon',          zg: '鑽錐寶可夢' },
+            { i: 45,  t: 'grass',    e: 'Vileplume',   z: '霸王花',   eg: 'Flower Pokémon',         zg: '花寶可夢' },
+            { i: 63,  t: 'psychic',  e: 'Abra',        z: '凱西',     eg: 'Psi Pokémon',            zg: '念力寶可夢' },
+            { i: 64,  t: 'psychic',  e: 'Kadabra',     z: '勇基拉',   eg: 'Psi Pokémon',            zg: '念力寶可夢' },
+            { i: 65,  t: 'psychic',  e: 'Alakazam',    z: '胡地',     eg: 'Psi Pokémon',            zg: '念力寶可夢' },
+            { i: 77,  t: 'fire',     e: 'Ponyta',      z: '小火馬',   eg: 'Fire Horse Pokémon',     zg: '火馬寶可夢' },
+            { i: 81,  t: 'electric', e: 'Magnemite',   z: '小磁怪',   eg: 'Magnet Pokémon',         zg: '磁鐵寶可夢' },
+            { i: 82,  t: 'electric', e: 'Magneton',    z: '三合一磁怪',eg: 'Magnet Pokémon',        zg: '磁鐵寶可夢' },
+            { i: 86,  t: 'water',    e: 'Seel',        z: '小海獅',   eg: 'Sea Lion Pokémon',       zg: '海獅寶可夢' },
+            { i: 94,  t: 'ghost',    e: 'Gengar',      z: '耿鬼',     eg: 'Shadow Pokémon',         zg: '影子寶可夢' },
+            { i: 104, t: 'ground',   e: 'Cubone',      z: '卡拉卡拉', eg: 'Lonely Pokémon',         zg: '孤獨寶可夢' },
+            { i: 109, t: 'poison',   e: 'Koffing',     z: '瓦斯彈',   eg: 'Poison Gas Pokémon',     zg: '毒氣寶可夢' },
+            { i: 110, t: 'poison',   e: 'Weezing',     z: '雙彈瓦斯', eg: 'Poison Gas Pokémon',     zg: '毒氣寶可夢' },
+            { i: 114, t: 'grass',    e: 'Tangela',     z: '蔓藤怪',   eg: 'Vine Pokémon',           zg: '藤蔓寶可夢' },
+            { i: 116, t: 'water',    e: 'Horsea',      z: '墨海馬',   eg: 'Dragon Pokémon',         zg: '龍寶可夢' },
+            { i: 118, t: 'water',    e: 'Goldeen',     z: '角金魚',   eg: 'Goldfish Pokémon',       zg: '金魚寶可夢' },
+            { i: 120, t: 'water',    e: 'Staryu',      z: '海星星',   eg: 'Star Shape Pokémon',     zg: '星型寶可夢' },
+            { i: 121, t: 'water',    e: 'Starmie',     z: '寶石海星', eg: 'Mysterious Pokémon',     zg: '謎寶可夢' },
+            { i: 123, t: 'bug',      e: 'Scyther',     z: '飛天螳螂', eg: 'Mantis Pokémon',         zg: '螳螂寶可夢' },
+            { i: 124, t: 'ice',      e: 'Jynx',        z: '迷唇姐',   eg: 'Human Shape Pokémon',    zg: '人形寶可夢' },
+            { i: 125, t: 'electric', e: 'Electabuzz',  z: '電擊獸',   eg: 'Electric Pokémon',       zg: '電擊寶可夢' },
+            { i: 126, t: 'fire',     e: 'Magmar',      z: '鴨嘴火獸', eg: 'Spitfire Pokémon',       zg: '吐火寶可夢' },
+            { i: 129, t: 'water',    e: 'Magikarp',    z: '鯉魚王',   eg: 'Fish Pokémon',           zg: '魚寶可夢' },
+            { i: 130, t: 'water',    e: 'Gyarados',    z: '暴鯉龍',   eg: 'Atrocious Pokémon',      zg: '凶惡寶可夢' },
+            { i: 131, t: 'water',    e: 'Lapras',      z: '拉普拉斯', eg: 'Transport Pokémon',      zg: '乘載寶可夢' },
+            { i: 134, t: 'water',    e: 'Vaporeon',    z: '水伊布',   eg: 'Bubble Jet Pokémon',     zg: '吐泡寶可夢' },
+            { i: 149, t: 'dragon',   e: 'Dragonite',   z: '快龍',     eg: 'Dragon Pokémon',         zg: '龍寶可夢' }
         ];
 
         const questionTemplates = {
-            'grass': ["Which Pokémon is a Grass type?", "Who likes to hide in the forest?", "Find the Grass type Pokémon."],
-            'fire': ["Which Pokémon is a Fire type?", "Who uses fire to attack?", "Find the Fire type Pokémon."],
-            'water': ["Which Pokémon is a Water type?", "Who can shoot water?", "Who lives in the sea?"],
+            'grass':    ["Which Pokémon is a Grass type?", "Who likes to hide in the forest?", "Find the Grass type Pokémon."],
+            'fire':     ["Which Pokémon is a Fire type?", "Who uses fire to attack?", "Find the Fire type Pokémon."],
+            'water':    ["Which Pokémon is a Water type?", "Who can shoot water?", "Who lives in the sea?"],
             'electric': ["Which Pokémon is an Electric type?", "Who uses electricity?", "Who has electric power?"],
-            'bug': ["Which Pokémon is a Bug type?", "Who looks like an insect?", "Who lives in the trees?"],
-            'normal': ["Which Pokémon is a Normal type?", "Find the Normal type Pokémon."],
-            'rock': ["Which Pokémon is a Rock type?", "Who is made of rocks?", "Who lives in the mountain?"],
-            'ground': ["Which Pokémon is a Ground type?", "Who likes to dig in the dirt?"],
-            'ghost': ["Which Pokémon is a Ghost type?", "Who is a scary ghost?"],
-            'poison': ["Which Pokémon is a Poison type?", "Who uses poison to attack?"],
+            'bug':      ["Which Pokémon is a Bug type?", "Who looks like an insect?", "Who lives in the trees?"],
+            'normal':   ["Which Pokémon is a Normal type?", "Find the Normal type Pokémon."],
+            'rock':     ["Which Pokémon is a Rock type?", "Who is made of rocks?", "Who lives in the mountain?"],
+            'ground':   ["Which Pokémon is a Ground type?", "Who likes to dig in the dirt?"],
+            'ghost':    ["Which Pokémon is a Ghost type?", "Who is a scary ghost?"],
+            'poison':   ["Which Pokémon is a Poison type?", "Who uses poison to attack?"],
             'fighting': ["Which Pokémon is a Fighting type?", "Who likes to punch and kick?"],
-            'psychic': ["Which Pokémon is a Psychic type?", "Who has magic mind power?"],
-            'dragon': ["Which Pokémon is a Dragon type?", "Who is a strong dragon?"],
-            'ice': ["Which Pokémon is an Ice type?", "Who likes the cold snow?"],
-            'fairy': ["Which Pokémon is a Fairy type?", "Who has fairy magic?"]
+            'psychic':  ["Which Pokémon is a Psychic type?", "Who has magic mind power?"],
+            'dragon':   ["Which Pokémon is a Dragon type?", "Who is a strong dragon?"],
+            'ice':      ["Which Pokémon is an Ice type?", "Who likes the cold snow?"],
+            'fairy':    ["Which Pokémon is a Fairy type?", "Who has fairy magic?"]
         };
 
-        let currentMode = 'simple'; 
+        let currentMode = 'simple';
         let currentRound = 1;
-        const totalRounds = 5; 
+        const totalRounds = 5;
         let score = 0;
-        let targetPokemon = null; 
+        let targetPokemon = null;
         let currentQuestionText = "";
-        let isProcessing = false; 
+        let isProcessing = false;
+        let correctCardEl = null; // 記錄答對的卡片元素
 
         function speakText(text, speechRate = 1) {
             window.speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'en-US';
-            utterance.rate = speechRate; 
+            utterance.rate = speechRate;
             utterance.pitch = 1.1;
             window.speechSynthesis.speak(utterance);
         }
 
+        function speakPokemonName(name, cardEl, x, y) {
+            // 唸名字
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(name);
+            utterance.lang = 'en-US';
+            utterance.rate = 0.85;
+            utterance.pitch = 1.2;
+            window.speechSynthesis.speak(utterance);
+
+            // 卡片彈跳動畫
+            if (cardEl) {
+                cardEl.classList.remove('card-bounce');
+                void cardEl.offsetWidth; // reflow
+                cardEl.classList.add('card-bounce');
+                cardEl.addEventListener('animationend', () => cardEl.classList.remove('card-bounce'), { once: true });
+            }
+
+            // 浮動顯示名字
+            if (x !== undefined && y !== undefined) {
+                showFloatingAnim(x, y, `🔊 ${name}`, 'text-green-600');
+            }
+        }
+
         function replayAudio() {
-            if(currentQuestionText) speakText(currentQuestionText, 0.75);
+            if (currentQuestionText) speakText(currentQuestionText, 0.75);
         }
 
         function setMode(mode) {
             currentMode = mode;
             document.getElementById('btnSimple').classList.remove('btn-active');
             document.getElementById('btnAdvanced').classList.remove('btn-active');
-            
             if (mode === 'simple') document.getElementById('btnSimple').classList.add('btn-active');
             else document.getElementById('btnAdvanced').classList.add('btn-active');
-            
             initGame();
         }
 
         function initGame() {
             currentRound = 1;
             score = 0;
-            isProcessing = false; 
-            
+            isProcessing = false;
+            correctCardEl = null;
             document.getElementById('scoreText').innerText = score;
             document.getElementById('nextBtn').classList.add('hidden');
             document.getElementById('nextBtn').innerText = "Next Question (下一題) ➡️";
@@ -202,18 +243,18 @@
         }
 
         function startRound() {
-            if (isProcessing) return; 
-            
+            if (isProcessing) return;
+            correctCardEl = null;
+
             document.getElementById('roundText').innerText = `Round ${currentRound} / ${totalRounds}`;
             document.getElementById('optionsContainer').innerHTML = '';
             document.getElementById('nextBtn').classList.add('hidden');
 
             const pool = currentMode === 'simple' ? pokeDB.filter(p => p.s) : pokeDB;
             const shuffledPool = [...pool].sort(() => Math.random() - 0.5);
-            
+
             let selectedOptions = [];
             let usedTypes = [];
-            
             for (let p of shuffledPool) {
                 if (!usedTypes.includes(p.t)) {
                     usedTypes.push(p.t);
@@ -228,12 +269,12 @@
             currentQuestionText = templates[Math.floor(Math.random() * templates.length)];
 
             renderOptions(selectedOptions);
-            
+
             document.getElementById('message').innerText = "Listen & Choose!";
             document.getElementById('message').className = "text-xl md:text-3xl font-bold text-blue-500 h-8 md:h-10";
             document.getElementById('questionText').innerText = currentQuestionText;
             document.getElementById('audioBtn').classList.remove('hidden');
-            
+
             speakText(currentQuestionText, 0.75);
         }
 
@@ -242,59 +283,54 @@
             optionsData.sort(() => Math.random() - 0.5).forEach(poke => {
                 const card = document.createElement('div');
                 card.className = 'poke-card bg-white border-4 border-gray-200 rounded-2xl md:rounded-3xl p-3 md:p-4 w-[45%] md:w-64 h-48 md:h-72 flex flex-col items-center justify-center';
-                card.dataset.id = poke.i; 
-                
+                card.dataset.id = poke.i;
+
                 const imageUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${poke.i}.png`;
-                
                 card.innerHTML = `<img id="img-${poke.i}" src="${imageUrl}" alt="Pokemon" class="h-24 md:h-48 object-contain pointer-events-none transition-all duration-300">`;
-                
-                // 新增：把 event 傳遞進去以取得點擊座標
+
                 card.onclick = (e) => checkAnswer(e, card, poke.i);
                 container.appendChild(card);
             });
         }
 
-        // 新增：顯示彈出浮動動畫的功能
         function showFloatingAnim(x, y, text, colorClass) {
             const el = document.createElement('div');
             el.innerText = text;
-            // 結合 Tailwind 與 自訂 CSS
             el.className = `floating-anim ${colorClass} text-3xl md:text-5xl font-black`;
             el.style.left = `${x}px`;
             el.style.top = `${y}px`;
-            
             document.body.appendChild(el);
-            
-            // 動畫結束後自動移除該元素
-            setTimeout(() => {
-                el.remove();
-            }, 1000);
+            setTimeout(() => el.remove(), 1000);
         }
 
         function checkAnswer(event, selectedCard, selectedId) {
-            if (isProcessing) return; 
-            isProcessing = true; 
-            
+            // 如果是答對後點擊正確卡片 → 唸名字
+            if (selectedCard === correctCardEl) {
+                speakPokemonName(targetPokemon.e, selectedCard, event.clientX, event.clientY);
+                return;
+            }
+
+            if (isProcessing) return;
+            isProcessing = true;
+
             const msgEl = document.getElementById('message');
             const allCards = document.querySelectorAll('.poke-card');
-
-            // 取得點擊座標 (給浮動動畫使用)
             const clickX = event.clientX;
             const clickY = event.clientY;
 
             if (selectedId === targetPokemon.i) {
-                // 答對動畫與計分
+                // ✅ 答對
                 showFloatingAnim(clickX, clickY, '✅ +10', 'text-green-500');
 
                 msgEl.innerText = "Correct! 🌟";
                 msgEl.className = "text-xl md:text-3xl font-bold text-green-500 h-8 md:h-10";
                 speakText("Correct!", 0.9);
-                
-                score += 10; // 改為配合動畫的 +10 分
+
+                score += 10;
                 document.getElementById('scoreText').innerText = score;
 
                 const targetImg = document.getElementById(`img-${targetPokemon.i}`);
-                targetImg.classList.add('img-shrink'); 
+                targetImg.classList.add('img-shrink');
                 targetImg.classList.remove('h-24', 'md:h-48');
 
                 const infoDiv = document.createElement('div');
@@ -311,30 +347,36 @@
 
                 allCards.forEach(card => {
                     if (parseInt(card.dataset.id) === targetPokemon.i) {
-                        card.classList.add('correct-card');
+                        card.classList.add('correct-card', 'correct-card-clickable', 'pulse-glow');
+                        correctCardEl = card; // 記錄答對卡片
                     } else {
                         card.classList.add('wrong-card');
                     }
                 });
 
+                // 自動唸名字（延遲 0.8 秒，等 "Correct!" 說完）
+                setTimeout(() => {
+                    speakPokemonName(targetPokemon.e, selectedCard);
+                }, 800);
+
                 showNextButton();
 
             } else {
-                // 答錯動畫與計分
+                // ❌ 答錯
                 showFloatingAnim(clickX, clickY, '❌ -2', 'text-red-500');
 
                 msgEl.innerText = "Oops! Try again! ❌";
                 msgEl.className = "text-xl md:text-3xl font-bold text-red-500 h-8 md:h-10";
                 speakText("Oops! Try again.", 0.9);
-                
+
                 selectedCard.classList.add('wrong-card', 'shake');
-                
-                score = Math.max(0, score - 2); // 改為配合動畫的 -2 分 (最低0分)
+
+                score = Math.max(0, score - 2);
                 document.getElementById('scoreText').innerText = score;
-                
+
                 setTimeout(() => {
                     selectedCard.classList.remove('shake');
-                    isProcessing = false; 
+                    isProcessing = false;
                 }, 500);
             }
         }
@@ -342,7 +384,7 @@
         function showNextButton() {
             const nextBtn = document.getElementById('nextBtn');
             nextBtn.classList.remove('hidden');
-            
+
             if (currentRound >= totalRounds) {
                 nextBtn.innerText = "Play Again (再玩一次) 🏆";
                 nextBtn.className = "mt-8 md:mt-10 bg-green-500 hover:bg-green-600 text-white px-6 py-3 md:px-10 md:py-4 rounded-full font-bold shadow-lg transition text-lg md:text-2xl mx-auto block";
@@ -353,21 +395,14 @@
 
         function nextRound() {
             currentRound++;
-            isProcessing = false; 
+            isProcessing = false;
+            correctCardEl = null;
             startRound();
         }
 
-        // 確保網頁完全載入後啟動
         window.addEventListener('DOMContentLoaded', () => {
             setMode('simple');
         });
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
